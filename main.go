@@ -7,9 +7,8 @@ import (
 )
 
 // Глобальные переменные
-var (
-	GameWorld *World
-)
+
+var gameWorld *World
 
 // Игровой мир---------------------------------------------------------------
 type World struct {
@@ -18,27 +17,27 @@ type World struct {
 	InteractionItem InteractionItem
 }
 
-func (W *World) Processing(Cmd string, arg ...string) string {
-	return W.Player.PerformAction(Cmd, arg)
+func (w *World) Processing(cmd string, arg ...string) string {
+	return w.Player.PerformAction(cmd, arg)
 }
 
-func NewWorld(R Rooms, P *Player, InteractionItem InteractionItem) *World {
+func NewWorld(r Rooms, p *Player, interactionItem InteractionItem) *World {
 	return &World{
-		Rooms:           R,
-		Player:          P,
-		InteractionItem: InteractionItem,
+		Rooms:           r,
+		Player:          p,
+		InteractionItem: interactionItem,
 	}
 }
 
 // Описание-------------------------------------------------------------------
 type Description map[string]string
 
-func (D Description) Add(NameMove, Description string) {
-	D[NameMove] = Description
+func (d Description) Add(nameMove, description string) {
+	d[nameMove] = description
 }
 
-func (D Description) GetDescriptionString(Cmd string) string {
-	return D[Cmd]
+func (d Description) GetDescriptionString(cmd string) string {
+	return d[cmd]
 }
 
 func NewDescription() *Description {
@@ -49,16 +48,16 @@ func NewDescription() *Description {
 // Задачи---------------------------------------------------------------------
 type Task map[string]bool
 
-func (T Task) Add(Name string, Complete bool) {
-	T[Name] = Complete
+func (T Task) Add(name string, complete bool) {
+	T[name] = complete
 }
 
-func (T Task) GetTaskString(Cmd string, Backpack bool) string {
-	if Cmd != "осмотреться" {
+func (T Task) GetTaskString(cmd string, backpack bool) string {
+	if cmd != "осмотреться" {
 		return ""
 	}
 	for task, complete := range T {
-		if Backpack {
+		if backpack {
 			complete = !complete
 		}
 		if complete {
@@ -83,38 +82,37 @@ type Room struct {
 	CloseDoor   bool
 }
 
-func (R Room) MoveAllowedString() string {
+func (r Room) MoveAllowedString() string {
 	str := ". можно пройти - "
-	for _, Room := range R.RoomAllowed {
-		str += Room.Name + ", "
+	for _, room := range r.RoomAllowed {
+		str += room.Name + ", "
 	}
 	return RemoveLastChar(str)
 }
 
-func (R *Room) GetDescription(Cmd string, Backpack bool) string {
-
-	return R.Description.GetDescriptionString(Cmd) + R.RoomItems.GetRoomItemsString(Cmd) + R.Task.GetTaskString(Cmd, Backpack) + R.MoveAllowedString()
+func (r *Room) GetDescription(cmd string, backpack bool) string {
+	return r.Description.GetDescriptionString(cmd) + r.RoomItems.GetRoomItemsString(cmd) + r.Task.GetTaskString(cmd, backpack) + r.MoveAllowedString()
 }
 
-func (R *Room) SetRoomAllowed(Room ...*Room) {
-	R.RoomAllowed = Room
+func (r *Room) SetRoomAllowed(room ...*Room) {
+	r.RoomAllowed = room
 }
 
-func NewRoom(Name string, Items *RoomItems, Task *Task, Desc *Description, CloseDoor bool) *Room {
+func NewRoom(name string, items *RoomItems, task *Task, desc *Description, closeDoor bool) *Room {
 	return &Room{
-		Name:        Name,
-		RoomItems:   Items,
-		Task:        Task,
-		Description: Desc,
-		CloseDoor:   CloseDoor,
+		Name:        name,
+		RoomItems:   items,
+		Task:        task,
+		Description: desc,
+		CloseDoor:   closeDoor,
 	}
 }
 
 // Комнаты--------------------------------------------------------------------
 type Rooms []*Room
 
-func (R Rooms) GetDefaultRoom() (*Room, error) {
-	for _, el := range R {
+func (r Rooms) GetDefaultRoom() (*Room, error) {
+	for _, el := range r {
 		if el.Name == "кухня" {
 			return el, nil
 		}
@@ -122,17 +120,17 @@ func (R Rooms) GetDefaultRoom() (*Room, error) {
 	return &Room{}, fmt.Errorf("Комната по умолчанию не найдена")
 }
 
-func (R Rooms) GetRoom(Name string) *Room {
-	for _, el := range R {
-		if el.Name == Name {
+func (r Rooms) GetRoom(name string) *Room {
+	for _, el := range r {
+		if el.Name == name {
 			return el
 		}
 	}
 	return &Room{}
 }
 
-func (R *Room) OpenDoor() {
-	for _, room := range R.RoomAllowed {
+func (r *Room) OpenDoor() {
+	for _, room := range r.RoomAllowed {
 		room.CloseDoor = false // Теперь изменяется оригинальный объект
 	}
 }
@@ -140,22 +138,22 @@ func (R *Room) OpenDoor() {
 // Предметы комнаты-----------------------------------------------------------
 type RoomItems map[string][]Item
 
-func (R RoomItems) Add(Name string, Itm ...string) {
-	Items := []Item{}
-	for _, el := range Itm {
+func (r RoomItems) Add(name string, itm ...string) {
+	Items := make([]Item, 0, 3)
+	for _, el := range itm {
 		Items = append(Items, Item(el))
 	}
-	R[Name] = Items
+	r[name] = Items
 }
 
-func (R RoomItems) GetRoomItemsString(Cmd string) string {
-	if Cmd != "осмотреться" {
+func (r RoomItems) GetRoomItemsString(cmd string) string {
+	if cmd != "осмотреться" {
 		return ""
 	}
 
-	keys := make([]string, 0)
+	keys := make([]string, 0, 3)
 
-	for key := range R {
+	for key := range r {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -164,7 +162,7 @@ func (R RoomItems) GetRoomItemsString(Cmd string) string {
 
 	for _, key := range keys {
 		str += "на " + key + "е: "
-		for _, item := range R[key] {
+		for _, item := range r[key] {
 			str += string(item) + ", "
 		}
 	}
@@ -176,30 +174,29 @@ func (R RoomItems) GetRoomItemsString(Cmd string) string {
 
 }
 
-func (R RoomItems) HasItem(NameItem string) bool {
-	for _, Items := range R {
-		for _, Item := range Items {
-			if string(Item) == NameItem {
+func (r RoomItems) HasItem(nameItem string) bool {
+	for _, items := range r {
+		for _, item := range items {
+			if string(item) == nameItem {
 				return true
 			}
 		}
 	}
-
 	return false
 }
 
-func (R RoomItems) DeleteItem(Name Item) {
-	for key, Items := range R {
-		for i, Item := range Items {
-			if Item == Name {
-				R[key] = append(Items[:i], Items[i+1:]...)
+func (r RoomItems) DeleteItem(name Item) {
+	for key, items := range r {
+		for i, item := range items {
+			if item == name {
+				r[key] = append(items[:i], items[i+1:]...)
 				break
 			}
 		}
 	}
-	for key, Items := range R {
-		if len(Items) == 0 {
-			delete(R, key)
+	for key, items := range r {
+		if len(items) == 0 {
+			delete(r, key)
 		}
 	}
 }
@@ -221,138 +218,133 @@ type Player struct {
 	CurrentRoom *Room
 }
 
-func (P *Player) IsChangeRoom(NameRoom string) bool {
-	for _, Room := range P.CurrentRoom.RoomAllowed {
-		if Room.Name == NameRoom {
+func (p *Player) IsChangeRoom(nameRoom string) bool {
+	for _, room := range p.CurrentRoom.RoomAllowed {
+		if room.Name == nameRoom {
 			return true
 		}
 	}
 	return false
 }
 
-func (P *Player) PerformAction(Cmd string, Arg []string) string {
-	switch Cmd {
+func (p *Player) PerformAction(cmd string, arg []string) string {
+	switch cmd {
 	case "осмотреться":
-		return P.LookAround(Cmd, P.Backpack)
+		return p.LookAround(cmd, p.Backpack)
 	case "идти":
-		return P.Go(Cmd, Arg[0])
+		return p.Go(cmd, arg[0])
 	case "надеть":
-		return P.PutOn(Cmd, Arg[0])
+		return p.PutOn(arg[0])
 	case "взять":
-		return P.Take(Cmd, Arg[0])
+		return p.Take(arg[0])
 	case "применить":
-		return P.Apply(Cmd, Arg)
+		return p.Apply(arg)
 	default:
 		return "неизвестная команда"
 	}
 }
 
-func (P *Player) Go(Cmd, Arg string) string {
-	if !P.IsChangeRoom(Arg) {
-		return "нет пути в " + Arg
+func (p *Player) Go(cmd, arg string) string {
+	if !p.IsChangeRoom(arg) {
+		return "нет пути в " + arg
 	}
-	Room := GameWorld.Rooms.GetRoom(Arg)
+	Room := gameWorld.Rooms.GetRoom(arg)
 	if Room.CloseDoor {
 		return "дверь закрыта"
 
 	}
 
-	P.CurrentRoom = GameWorld.Rooms.GetRoom(Arg)
+	p.CurrentRoom = gameWorld.Rooms.GetRoom(arg)
 
-	return P.CurrentRoom.GetDescription(Cmd, P.Backpack)
+	return p.CurrentRoom.GetDescription(cmd, p.Backpack)
 }
 
-func (P *Player) Take(Cmd, Arg string) string {
-	if !P.CurrentRoom.RoomItems.HasItem(Arg) {
+func (p *Player) Take(arg string) string {
+	if !p.CurrentRoom.RoomItems.HasItem(arg) {
 		return "нет такого"
 	}
-	if !P.Backpack {
+	if !p.Backpack {
 		return "некуда класть"
 	}
 
-	P.CurrentRoom.RoomItems.DeleteItem(Item(Arg))
-	P.Inventory.Add(Item(Arg))
-	return "предмет добавлен в инвентарь: " + Arg
+	p.CurrentRoom.RoomItems.DeleteItem(Item(arg))
+	p.Inventory.Add(Item(arg))
+	return "предмет добавлен в инвентарь: " + arg
 }
 
-func (P *Player) PutOn(Cmd, Arg string) string {
-	if !P.CurrentRoom.RoomItems.HasItem(Arg) {
+func (p *Player) PutOn(arg string) string {
+	if !p.CurrentRoom.RoomItems.HasItem(arg) {
 		return "нет такого"
 	}
 
-	P.Backpack = true
-	P.CurrentRoom.RoomItems.DeleteItem(Item(Arg))
+	p.Backpack = true
+	p.CurrentRoom.RoomItems.DeleteItem(Item(arg))
 
-	return "вы надели: " + Arg
+	return "вы надели: " + arg
 }
 
-func (P *Player) Apply(Cmd string, Arg []string) string {
-	if !P.Inventory.HasItem(Arg[0]) {
-		return "нет предмета в инвентаре - " + Arg[0]
+func (p *Player) Apply(arg []string) string {
+	if !p.Inventory.HasItem(arg[0]) {
+		return "нет предмета в инвентаре - " + arg[0]
 	}
-	if !GameWorld.InteractionItem.IsApplicationAllowed(Arg) {
+	if !gameWorld.InteractionItem.IsApplicationAllowed(arg) {
 		return "не к чему применить"
 	}
-	P.CurrentRoom.OpenDoor()
+	p.CurrentRoom.OpenDoor()
 
 	return "дверь открыта"
 }
 
-func (P *Player) LookAround(Cmd string, Bacpack bool) string {
-	return P.CurrentRoom.GetDescription(Cmd, Bacpack)
+func (p *Player) LookAround(cmd string, bacpack bool) string {
+	return p.CurrentRoom.GetDescription(cmd, bacpack)
 }
 
-func NewPlayer(Room *Room) *Player {
+func NewPlayer(room *Room) *Player {
 	return &Player{
 		Name:        "Viktor",
 		Backpack:    false,
-		Inventory:   make(map[string]Item),
-		CurrentRoom: Room,
+		Inventory:   make(Inventory),
+		CurrentRoom: room,
 	}
 }
 
 // Инвентарь игрока------------------------------------------------------------
 type Inventory map[string]Item
 
-func (I Inventory) Add(Name Item) {
-	I[string(Name)] = Name
+func (i Inventory) Add(name Item) {
+	i[string(name)] = name
 }
 
-func (I Inventory) HasItem(NameItem string) bool {
-	_, err := I[NameItem]
-
+func (i Inventory) HasItem(nameItem string) bool {
+	_, err := i[nameItem]
 	return err
 }
 
-func (I Inventory) DeleteItem(Name string) {
-	delete(I, Name)
+func (i Inventory) DeleteItem(name string) {
+	delete(i, name)
 }
 
-func (I Inventory) IsEmpty() bool {
-	if len(I) == 0 {
+func (i Inventory) IsEmpty() bool {
+	if len(i) == 0 {
 		return true
 	}
 	return false
-}
-
-func NewInventory() Inventory {
-	return make(map[string]Item)
 }
 
 // Взаимодействие предметов в мире--------------------------------------------------
 type InteractionItem map[string]string
 
 func NewInetactionItem() *InteractionItem {
-	I := make(InteractionItem)
-	return &I
+	i := make(InteractionItem)
+	return &i
 }
 
-func (I InteractionItem) Add(Item1, Item2 string) {
-	I[Item1] = Item2
+func (i InteractionItem) Add(item1, item2 string) {
+	i[item1] = item2
 }
 
-func (I InteractionItem) IsApplicationAllowed(Arg []string) bool {
-	if I[Arg[0]] == Arg[1] {
+func (i InteractionItem) IsApplicationAllowed(arg []string) bool {
+	if i[arg[0]] == arg[1] {
 		return true
 	}
 	return false
@@ -369,81 +361,79 @@ func NewGameCaseTest() GameCaseTest {
 
 func initRooms() Rooms {
 
-	var Rooms []*Room // Используем срез указателей на Room
+	kitchenDescriptions := NewDescription()
+	kitchenDescriptions.Add("осмотреться", "ты находишься на кухне, ")
+	kitchenDescriptions.Add("идти", "кухня, ничего интересного")
+	kitchenTask := NewTusk()
+	kitchenTask.Add(", надо собрать рюкзак и идти в универ", true)
+	kitchenTask.Add(", надо идти в универ", false)
+	kitchenItems := NewRoomItems()
+	kitchenItems.Add("стол", "чай")
+	kitchenRoom := NewRoom("кухня", kitchenItems, kitchenTask, kitchenDescriptions, false)
 
-	KitchenDescriptions := NewDescription()
-	KitchenDescriptions.Add("осмотреться", "ты находишься на кухне, ")
-	KitchenDescriptions.Add("идти", "кухня, ничего интересного")
-	KitchenTask := NewTusk()
-	KitchenTask.Add(", надо собрать рюкзак и идти в универ", true)
-	KitchenTask.Add(", надо идти в универ", false)
-	KitchenItems := NewRoomItems()
-	KitchenItems.Add("стол", "чай")
-	KitchenRoom := NewRoom("кухня", KitchenItems, KitchenTask, KitchenDescriptions, false)
+	corridorDescriptions := NewDescription()
+	corridorDescriptions.Add("осмотреться", "ничего интересного")
+	corridorDescriptions.Add("идти", "ничего интересного")
+	corridorTask := NewTusk()
+	corridorItems := NewRoomItems()
+	corridorRoom := NewRoom("коридор", corridorItems, corridorTask, corridorDescriptions, false)
 
-	CorridorDescriptions := NewDescription()
-	CorridorDescriptions.Add("осмотреться", "ничего интересного")
-	CorridorDescriptions.Add("идти", "ничего интересного")
-	CorridorTask := NewTusk()
-	CorridorItems := NewRoomItems()
-	CorridorRoom := NewRoom("коридор", CorridorItems, CorridorTask, CorridorDescriptions, false)
+	myRoomDescriptions := NewDescription()
+	myRoomDescriptions.Add("идти", "ты в своей комнате")
+	myRoomTask := NewTusk()
+	myRoomItems := NewRoomItems()
+	myRoomItems.Add("стул", "рюкзак")
+	myRoomItems.Add("стол", "ключи", "конспекты")
+	myRoom := NewRoom("комната", myRoomItems, myRoomTask, myRoomDescriptions, false)
 
-	MyRoomDescriptions := NewDescription()
-	MyRoomDescriptions.Add("идти", "ты в своей комнате")
-	MyRoomTask := NewTusk()
-	MyRoomItems := NewRoomItems()
-	MyRoomItems.Add("стул", "рюкзак")
-	MyRoomItems.Add("стол", "ключи", "конспекты")
-	MyRoom := NewRoom("комната", MyRoomItems, MyRoomTask, MyRoomDescriptions, false)
+	streetDescriptions := NewDescription()
+	streetDescriptions.Add("идти", "на улице весна")
+	streetTask := NewTusk()
+	streetItems := NewRoomItems()
+	street := NewRoom("улица", streetItems, streetTask, streetDescriptions, true)
 
-	StreetDescriptions := NewDescription()
-	StreetDescriptions.Add("идти", "на улице весна")
-	StreetTask := NewTusk()
-	StreetItems := NewRoomItems()
-	Street := NewRoom("улица", StreetItems, StreetTask, StreetDescriptions, true)
+	homeDescriptions := NewDescription()
+	homeDescriptions.Add("идти", "на улице весна")
+	homeTask := NewTusk()
+	homeItems := NewRoomItems()
+	home := NewRoom("домой", homeItems, homeTask, homeDescriptions, false)
 
-	HomeDescriptions := NewDescription()
-	HomeDescriptions.Add("идти", "на улице весна")
-	HomeTask := NewTusk()
-	HomeItems := NewRoomItems()
-	Home := NewRoom("домой", HomeItems, HomeTask, HomeDescriptions, false)
+	kitchenRoom.SetRoomAllowed(corridorRoom)
+	corridorRoom.SetRoomAllowed(kitchenRoom, myRoom, street)
+	myRoom.SetRoomAllowed(corridorRoom)
+	street.SetRoomAllowed(home)
 
-	KitchenRoom.SetRoomAllowed(CorridorRoom)
-	CorridorRoom.SetRoomAllowed(KitchenRoom, MyRoom, Street)
-	MyRoom.SetRoomAllowed(CorridorRoom)
-	Street.SetRoomAllowed(Home)
-
-	Rooms = append(Rooms, KitchenRoom, CorridorRoom, MyRoom, Street, Home)
+	Rooms := make([]*Room, 0, 6)
+	Rooms = append(Rooms, kitchenRoom, corridorRoom, myRoom, street, home)
 
 	return Rooms // Теперь возвращаем срез указателей на Room
 }
 
 // Инициализация необходимых объектов-------------------------------------------
 func initGame() {
-	Rooms := initRooms()
-	DefaultRoom, err := Rooms.GetDefaultRoom()
+	rooms := initRooms()
+	defaultRoom, err := rooms.GetDefaultRoom()
 	if err != nil {
 		panic("Не определена комната по умолчанию")
 	}
-	Player := NewPlayer(DefaultRoom)
+	player := NewPlayer(defaultRoom)
 
-	InteractionItemWorld := NewInetactionItem()
-	InteractionItemWorld.Add("ключи", "дверь")
-	GameWorld = NewWorld(Rooms, Player, *InteractionItemWorld)
+	interactionItemWorld := NewInetactionItem()
+	interactionItemWorld.Add("ключи", "дверь")
+	gameWorld = NewWorld(rooms, player, *interactionItemWorld)
 
 }
 
 // ОбработкаДействия-------------------------------------------------------------
-func handleCommand(Cmd string) string {
-	str := strings.Split(Cmd, " ")
-	return GameWorld.Processing(str[0], str[1:]...)
+func handleCommand(cmd string) string {
+	str := strings.Split(cmd, " ")
+	return gameWorld.Processing(str[0], str[1:]...)
 }
 
 func RemoveLastChar(s string) string {
-
 	runes := []rune(s)
 
-	if len(runes) == 0 {
+	if len(runes) < 2 {
 		return s
 	}
 
@@ -453,51 +443,12 @@ func RemoveLastChar(s string) string {
 }
 
 func main() {
-	CasesTest := NewGameCaseTest()
+	casesTest := NewGameCaseTest()
 	initGame()
 
-	for _, Case := range CasesTest {
-		for _, el := range Case {
+	for _, c := range casesTest {
+		for _, el := range c {
 			fmt.Println(handleCommand(el))
 		}
 	}
 }
-
-/* Ссылку или копию должны возвращать конструкторы экземпляров
-строкутур/мап/массивов/слайсов/примитивныхт типов?
-
-В Функции main в каком случае следует называть переменные с большой буквы, а в каком
-с маленькой? Cases/Case/el и тд?
-
-
-		{"осмотреться",
-"завтракать",
-"идти комната",
-"идти коридор",
-"применить ключи дверь",
-"идти комната", "осмотреться",
-"взять ключи",
-"надеть рюкзак",
-"осмотреться",
-"взять ключи",
-"взять телефон",
-"взять ключи",
-"осмотреться",
-"взять конспекты",
-"осмотреться",
-"идти коридор",
-"идти кухня",
-"осмотреться",
-"идти коридор",
-"идти улица",
-"применить ключи дверь",
-"применить телефон шкаф",
-"применить ключи шкаф",
-"идти улица"},
-
-	}
-
-
-осмотреться", "ты находишься на кухне, на столе: чай, надо собрать рюкзак и идти в универ. можно пройти - коридор"}, // действие осмотреться
-		"идти коридор","идти комната","осмотреться","надеть рюкзак","взять ключи","взять конспекты","идти коридор","применить ключи дверь","идти улица"
-*/
