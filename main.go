@@ -40,19 +40,19 @@ func (d Description) GetDescriptionString(cmd string) string {
 	return d[cmd]
 }
 
-func NewDescription() *Description {
-	d := make(Description)
+func NewDescription(desc map[string]string) *Description {
+	d := Description(desc)
 	return &d
 }
 
 // Задачи---------------------------------------------------------------------
-type Task map[string]bool
+type Tasks map[string]bool
 
-func (T Task) Add(name string, complete bool) {
+func (T Tasks) Add(name string, complete bool) {
 	T[name] = complete
 }
 
-func (T Task) GetTaskString(cmd string, backpack bool) string {
+func (T Tasks) GetTaskString(cmd string, backpack bool) string {
 	if cmd != "осмотреться" {
 		return ""
 	}
@@ -67,8 +67,8 @@ func (T Task) GetTaskString(cmd string, backpack bool) string {
 	return ""
 }
 
-func NewTusk() *Task {
-	t := make(Task)
+func NewTusks(m map[string]bool) *Tasks {
+	t := Tasks(m)
 	return &t
 }
 
@@ -78,7 +78,7 @@ type Room struct {
 	RoomItems   *RoomItems
 	RoomAllowed []*Room
 	Description *Description
-	Task        *Task
+	Task        *Tasks
 	CloseDoor   bool
 }
 
@@ -98,7 +98,7 @@ func (r *Room) SetRoomAllowed(room ...*Room) {
 	r.RoomAllowed = room
 }
 
-func NewRoom(name string, items *RoomItems, task *Task, desc *Description, closeDoor bool) *Room {
+func NewRoom(name string, items *RoomItems, task *Tasks, desc *Description, closeDoor bool) *Room {
 	return &Room{
 		Name:        name,
 		RoomItems:   items,
@@ -151,7 +151,7 @@ func (r RoomItems) GetRoomItemsString(cmd string) string {
 		return ""
 	}
 
-	keys := make([]string, 0, 3)
+	keys := make([]string, 0, len(r))
 
 	for key := range r {
 		keys = append(keys, key)
@@ -201,8 +201,8 @@ func (r RoomItems) DeleteItem(name Item) {
 	}
 }
 
-func NewRoomItems() *RoomItems {
-	r := make(RoomItems)
+func NewRoomItems(i map[string][]Item) *RoomItems {
+	r := RoomItems(i)
 	return &r
 
 }
@@ -361,42 +361,53 @@ func NewGameCaseTest() GameCaseTest {
 
 func initRooms() Rooms {
 
-	kitchenDescriptions := NewDescription()
-	kitchenDescriptions.Add("осмотреться", "ты находишься на кухне, ")
-	kitchenDescriptions.Add("идти", "кухня, ничего интересного")
-	kitchenTask := NewTusk()
-	kitchenTask.Add(", надо собрать рюкзак и идти в универ", true)
-	kitchenTask.Add(", надо идти в универ", false)
-	kitchenItems := NewRoomItems()
-	kitchenItems.Add("стол", "чай")
-	kitchenRoom := NewRoom("кухня", kitchenItems, kitchenTask, kitchenDescriptions, false)
+	kitchenRoom := NewRoom("кухня",
+		NewRoomItems(map[string][]Item{
+			"стол": {"чай"},
+		}),
+		NewTusks(map[string]bool{
+			", надо собрать рюкзак и идти в универ": true,
+			", надо идти в универ":                  false,
+		}),
+		NewDescription(map[string]string{
+			"осмотреться": "ты находишься на кухне, ",
+			"идти":        "кухня, ничего интересного",
+		}),
+		false)
 
-	corridorDescriptions := NewDescription()
-	corridorDescriptions.Add("осмотреться", "ничего интересного")
-	corridorDescriptions.Add("идти", "ничего интересного")
-	corridorTask := NewTusk()
-	corridorItems := NewRoomItems()
-	corridorRoom := NewRoom("коридор", corridorItems, corridorTask, corridorDescriptions, false)
+	corridorRoom := NewRoom("коридор",
+		NewRoomItems(make(map[string][]Item)),
+		NewTusks(make(map[string]bool)),
+		NewDescription(map[string]string{
+			"осмотреться": "ничего интересного",
+			"идти":        "ничего интересного",
+		}),
+		false)
 
-	myRoomDescriptions := NewDescription()
-	myRoomDescriptions.Add("идти", "ты в своей комнате")
-	myRoomTask := NewTusk()
-	myRoomItems := NewRoomItems()
-	myRoomItems.Add("стул", "рюкзак")
-	myRoomItems.Add("стол", "ключи", "конспекты")
-	myRoom := NewRoom("комната", myRoomItems, myRoomTask, myRoomDescriptions, false)
+	myRoom := NewRoom("комната",
+		NewRoomItems(map[string][]Item{
+			"стул": {"рюкзак"},
+			"стол": {"ключи", "конспекты"},
+		}),
+		NewTusks(make(map[string]bool)),
+		NewDescription(map[string]string{
+			"идти": "ты в своей комнате",
+		}),
+		false)
 
-	streetDescriptions := NewDescription()
-	streetDescriptions.Add("идти", "на улице весна")
-	streetTask := NewTusk()
-	streetItems := NewRoomItems()
-	street := NewRoom("улица", streetItems, streetTask, streetDescriptions, true)
+	street := NewRoom("улица",
+		NewRoomItems(make(map[string][]Item)),
+		NewTusks(make(map[string]bool)),
+		NewDescription(map[string]string{
+			"идти": "на улице весна"}),
+		true)
 
-	homeDescriptions := NewDescription()
-	homeDescriptions.Add("идти", "на улице весна")
-	homeTask := NewTusk()
-	homeItems := NewRoomItems()
-	home := NewRoom("домой", homeItems, homeTask, homeDescriptions, false)
+	home := NewRoom("домой",
+		NewRoomItems(make(map[string][]Item)),
+		NewTusks(make(map[string]bool)),
+		NewDescription(map[string]string{
+			"идти": "на улице весна"}),
+		false)
 
 	kitchenRoom.SetRoomAllowed(corridorRoom)
 	corridorRoom.SetRoomAllowed(kitchenRoom, myRoom, street)
@@ -406,7 +417,7 @@ func initRooms() Rooms {
 	Rooms := make([]*Room, 0, 6)
 	Rooms = append(Rooms, kitchenRoom, corridorRoom, myRoom, street, home)
 
-	return Rooms // Теперь возвращаем срез указателей на Room
+	return Rooms
 }
 
 // Инициализация необходимых объектов-------------------------------------------
